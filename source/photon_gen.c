@@ -855,6 +855,11 @@ star_init (freqmin, freqmax, ioniz_or_extract, f)
 
   *f = emit;                    // Calculate the surface flux between freqmin and freqmax
   *f *= (4. * PI * r * r);
+  /* Apply dilution factor implicit in lum_star_init: W = lum_star_init / (4πR²σT⁴_init).
+   * For bare BB (stock Central_object.dilution_factor = 1.0) this ratio is 1 and
+   * *f is unchanged. For W < 1 the band luminosity is reduced by the same factor. */
+  if (geo.tstar_init > 0.0)
+    *f *= geo.lum_star_init / (4. * PI * geo.rstar * geo.rstar * STEFAN_BOLTZMANN * pow (geo.tstar_init, 4.));
 
 
   return (0);

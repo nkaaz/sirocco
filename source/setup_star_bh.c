@@ -46,6 +46,7 @@ double
 get_stellar_params ()
 {
   char answer[LINELENGTH];
+  double w_dilute = 1.0;
 
   rdpar_comment ("Parameters for the Central Object");
 
@@ -117,7 +118,10 @@ get_stellar_params ()
     }
 
     if (geo.star_radiation)
+    {
       rddoub ("Central_object.temp", &geo.tstar_init);
+      rddoub ("Central_object.dilution_factor", &w_dilute);
+    }
   }
   else
   {
@@ -129,7 +133,10 @@ get_stellar_params ()
 
   geo.tstar = geo.tstar_init;
 
-  geo.lum_star = geo.lum_star_init = 4 * PI * geo.rstar * geo.rstar * STEFAN_BOLTZMANN * pow (geo.tstar, 4.);
+  /* dilution factor decouples L from 4πR²σT⁴: default 1.0 preserves bare-BB;
+   * W<1 lets T set the emission spectrum while L is reduced, so the source
+   * acts as a diluted BB representing (e.g.) a deep diffusion layer */
+  geo.lum_star = geo.lum_star_init = w_dilute * 4 * PI * geo.rstar * geo.rstar * STEFAN_BOLTZMANN * pow (geo.tstar, 4.);
 
 
   /* Describe the secondary if that is required */
