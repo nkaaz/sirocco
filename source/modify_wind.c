@@ -35,6 +35,8 @@
 
 char inroot[LINELENGTH], outroot[LINELENGTH], model_file[LINELENGTH];
 int model_flag, ksl_flag, cmf2obs_flag, obs2cmf_flag;
+int rcut_flag;                  /* NSH: zero-out (make transparent) all cells beyond rcut_val */
+double rcut_val;
 
 /**********************************************************/
 /**
@@ -71,6 +73,8 @@ xparse_command_line (argc, argv)
   sprintf (outroot, "%s", "new");
 
   model_flag = ksl_flag = obs2cmf_flag = cmf2obs_flag = 0;
+  rcut_flag = 0;
+  rcut_val = 0.0;
 
   if (argc == 1)
   {
@@ -131,6 +135,17 @@ xparse_command_line (argc, argv)
       else if (strcmp (argv[i], "-obs") == 0)
       {
         cmf2obs_flag = 1;
+      }
+      else if (strcmp (argv[i], "-rcut") == 0)
+      {
+        if (sscanf (argv[i + 1], "%le", &rcut_val) != 1)
+        {
+          printf ("sirocco: Expected a radius (cm) after -rcut switch\n");
+          exit (0);
+        }
+        rcut_flag = 1;
+        i++;
+        j = i;
       }
       else if (strncmp (argv[i], "-", 1) == 0)
       {
@@ -240,6 +255,34 @@ main (argc, argv)
        places in the plasma structure
      */
     put_ion (0, 1, 1, den);
+  }
+
+  if (rcut_flag)
+  {
+    /* NSH: make every wind cell whose centre lies beyond rcut_val optically
+       transparent, by flooring ne, rho and every ion density to a negligible
+       value.  Since den_config() = levden[level] * density[ion], this drives
+       all bound-free / bound-bound opacity (and emissivity) to ~0, and ne~0
+       kills electron scattering.  Used to strip the unconverged outer wind
+       for a spectrum-only extraction. */
+    int n, np, nion, ncut = 0;
+    double r;
+    for (n = 0; n < NDIM2; n++)
+    {
+      if (wmain[n].inwind < 0)
+        continue;
+      r = length (wmain[n].xcen);
+      if (r > rcut_val)
+      {
+        np = wmain[n].nplasma;
+        plasmamain[np].ne = 1.e-30;
+        plasmamain[np].rho = 1.e-30;
+        for (nion = 0; nion < nions; nion++)
+          plasmamain[np].density[nion] = 1.e-30;
+        ncut++;
+      }
+    }
+    printf ("rcut: made %d cells transparent (centre r > %.4e cm)\n", ncut, rcut_val);
   }
 
 
