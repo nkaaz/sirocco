@@ -141,7 +141,13 @@ extern int NWAVE_NOW;         /**< Either NWAVE_IONIZ or NWAVE_EXTRACT depending
                                 */
 #define NWAVE_MIN   100       /**< The minimum number of wavelength bins in during spectral cycles
                                */
-#define MAXSCAT    2000
+#define MAXSCAT    200000     /**< Photons reaching this many scatters are destroyed by
+                                 trans_phot.c (P_TOO_MANY_SCATTERS), discarding their energy.
+                                 The tau_es~100 photon-tired winds need ~50k scatters per
+                                 photon to escape, so the upstream default of 2000 silently
+                                 destroys ~94% of the luminosity. Check the diagnostic
+                                 "luminosity lost by too many scatters" is 0 on thick winds.
+                                 */
 
 /* Define the structures */
 #include "math_struc.h"
@@ -567,7 +573,7 @@ struct geometry
   int nxfreq;                   /**<  the number of frequency intervals actually used */
   double xfreq[NXBANDS + 1];    /**<  the frequency boundaries for the coarse spectra  */
 
-#define NBINS_IN_CELL_SPEC   1000       /**< The number of bins in the cell spectra  */
+#define NBINS_IN_CELL_SPEC   3000       /**< The number of bins in the cell spectra  */
 
   double cell_log_freq_min, cell_log_freq_max, cell_delta_lfreq;        /**< Parameters defining freqency intervals for cell spectra.
                                                                            These are defined as logarithmic frequency intervals */
