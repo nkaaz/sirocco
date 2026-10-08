@@ -219,7 +219,7 @@ broadcast_updated_macro_atom_properties (const int n_start, const int n_stop, co
 
   d_xsignal (files.root, "%-20s Begin macro atom updated properties communication\n", "NOK");
   const int n_cells_max = get_max_cells_per_rank (NPLASMA);
-  const int comm_buffer_size = calculate_comm_buffer_size (1 + 3 * n_cells_max, n_cells_max * (6 * size_gamma_est + 2 * size_Jbar_est));
+  const int comm_buffer_size = calculate_comm_buffer_size (1 + 3 * n_cells_max, n_cells_max * (8 * size_gamma_est + 2 * size_Jbar_est)   /* stimfix: +alpha_st_e, alpha_st_e_old */);
 
   char *const comm_buffer = malloc (comm_buffer_size);
   if (comm_buffer == NULL)
@@ -246,6 +246,8 @@ broadcast_updated_macro_atom_properties (const int n_start, const int n_stop, co
         MPI_Pack (macromain[n_plasma].gamma_e_old, size_gamma_est, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (macromain[n_plasma].alpha_st, size_gamma_est, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (macromain[n_plasma].alpha_st_old, size_gamma_est, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack (macromain[n_plasma].alpha_st_e, size_gamma_est, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);       /* stimfix */
+        MPI_Pack (macromain[n_plasma].alpha_st_e_old, size_gamma_est, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);   /* stimfix */
         MPI_Pack (&macromain[n_plasma].kpkt_rates_known, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (&macromain[n_plasma].matrix_rates_known, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
       }
@@ -269,6 +271,8 @@ broadcast_updated_macro_atom_properties (const int n_start, const int n_stop, co
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, macromain[n_plasma].gamma_e_old, size_gamma_est, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, macromain[n_plasma].alpha_st, size_gamma_est, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, macromain[n_plasma].alpha_st_old, size_gamma_est, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (comm_buffer, comm_buffer_size, &position, macromain[n_plasma].alpha_st_e, size_gamma_est, MPI_DOUBLE, MPI_COMM_WORLD);       /* stimfix */
+        MPI_Unpack (comm_buffer, comm_buffer_size, &position, macromain[n_plasma].alpha_st_e_old, size_gamma_est, MPI_DOUBLE, MPI_COMM_WORLD);   /* stimfix */
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, &macromain[n_plasma].kpkt_rates_known, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, &macromain[n_plasma].matrix_rates_known, 1, MPI_INT, MPI_COMM_WORLD);
       }
@@ -516,7 +520,7 @@ reduce_macro_atom_estimators (void)
     for (n = 0; n < size_gamma_est; n++)
     {
       macromain[mpi_i].alpha_st[n] = gamma_helper2[mpi_i + (n * NPLASMA)];
-      macromain[mpi_i].alpha_st_e[n] = gamma_helper2[mpi_i + ((n + size_gamma_est) * NPLASMA)] / np_mpi_global;
+      macromain[mpi_i].alpha_st_e[n] = gamma_helper2[mpi_i + ((n + size_gamma_est) * NPLASMA)];   /* stimfix 2026-10-01: removed extra / np_mpi_global (already divided before the reduce, cf. alpha_st, gamma, gamma_e) */
       macromain[mpi_i].gamma[n] = gamma_helper2[mpi_i + ((n + 2 * size_gamma_est) * NPLASMA)];
       macromain[mpi_i].gamma_e[n] = gamma_helper2[mpi_i + ((n + 3 * size_gamma_est) * NPLASMA)];
     }

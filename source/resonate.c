@@ -1015,7 +1015,7 @@ scatter (p, nres, nnscat)
 
         /* Need to compute the factor needed for the stimulated term. */
 
-        stim_fact = den_config (xplasma, ulvl) / den_config (xplasma, llvl) / xplasma->ne;
+        stim_fact = den_config (xplasma, ulvl) / den_config (xplasma, llvl) * xplasma->ne;     /* stimfix 2026-10-01: was / ne; matom.c, macro_accelerate.c, check_stimulated_recomb all use alpha_st * ne * n_u/n_l */
 
         gamma_twiddle =
           mplasma->gamma_old[xconfig[llvl].bfu_indx_first + m] - (mplasma->alpha_st_old[xconfig[llvl].bfu_indx_first + m] * stim_fact);
@@ -1039,8 +1039,21 @@ scatter (p, nres, nnscat)
         }
         else
         {
-          Error ("scatter (resonate.c): a gamma_twiddle is negative. Abort.\n");
-          Exit (0);
+          /* stimfix 2026-09-30: net stimulated recombination exceeds photoionization in this continuum
+             (possible once alpha_st is non-zero, e.g. first cycles with T_R >> T_E). matom.c and
+             macro_accelerate.c clip the net rate to zero in this case; here, instead of aborting,
+             split the absorbed packet using the gross (photoionization-only) estimators. */
+          {
+            /* stimfix 2026-10-01: log only the first few; Sirocco aborts after max_errors (1e6) repeats of one message */
+            static long n_neg_twiddle = 0;
+            if (n_neg_twiddle < 10)
+              Error ("scatter (resonate.c): a gamma_twiddle is negative; using gross gamma for k-packet fraction (logging first 10 only)\n");
+            n_neg_twiddle++;
+          }
+          if (mplasma->gamma_old[xconfig[llvl].bfu_indx_first + m] > 0 && mplasma->gamma_e_old[xconfig[llvl].bfu_indx_first + m] > 0)
+            prob_kpkt = 1. - mplasma->gamma_old[xconfig[llvl].bfu_indx_first + m] / mplasma->gamma_e_old[xconfig[llvl].bfu_indx_first + m];
+          else
+            prob_kpkt = 0.0;
         }
 
         /* Having got here we have calculated the probability of a k-packet
